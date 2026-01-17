@@ -1,0 +1,97 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Line Style:
+        Value: Lines
+      Cell Size: 1
+      Color: 160; 160; 164
+      Plane: XY
+      Plane Cell Count: 50
+      Reference Frame: <Fixed Frame>
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+      Marker Scale: 1
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+    - Class: rviz_default_plugins/LaserScan
+      Name: LaserScan 360
+      Enabled: true
+      Topic:
+        Value: /scan
+      Size (m): 0.05
+      Color: 255; 0; 0
+      Style: Points
+    - Class: rviz_default_plugins/LaserScan
+      Name: Front Scan
+      Enabled: true
+      Topic:
+        Value: /front_scan
+      Size (m): 0.08
+      Color: 0; 255; 0
+      Style: Points
+    - Class: rviz_default_plugins/LaserScan
+      Name: Rear Scan
+      Enabled: true
+      Topic:
+        Value: /rear_scan
+      Size (m): 0.08
+      Color: 255; 255; 0
+      Style: Points
+    - Class: rviz_default_plugins/Map
+      Name: Map
+      Enabled: true
+      Topic:
+        Value: /map
+      Alpha: 0.7
+      Color Scheme: map
+      Draw Behind: true
+    - Class: rviz_default_plugins/Odometry
+      Name: Odometry
+      Enabled: true
+      Topic:
+        Value: /odom
+      Arrow Length: 0.3
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+        Position:
+          Alpha: 0.3
+          Color: 204; 51; 204
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: map
+    Frame Rate: 30
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+    - Class: rviz_default_plugins/SetInitialPose
+    - Class: rviz_default_plugins/SetGoal
+  Views:
+    Current:
+      Class: rviz_default_plugins/TopDownOrtho
+      Name: TopDownOrtho
+      Near Clip Distance: 0.01
+      Scale: 15
+      Target Frame: base_link
+      X: 0
+      Y: 0
+Window Geometry:
+  Width: 1200
+  Height: 800
+  X: 100
+  Y: 100

@@ -135,22 +135,48 @@
             <model_scale>1.5</model_scale>
         </visual>
 
-        <!-- ===== SENSORES (simplificados) ===== -->
+        <!-- ===== SENSORES ===== -->
 
-        <!-- LIDAR 2D frontal -->
-        <sensor class="laser" name="front_lidar">
-            <pose_3d>1.0 0 0.5 0 0 0</pose_3d>
-            <fov_degrees>180</fov_degrees>
-            <sensor_period>0.1</sensor_period>
-            <nrays>180</nrays>
-            <max_range>20.0</max_range>
+        <!-- LIDAR 2D 360° para SLAM/Mapping (montado arriba) -->
+        <sensor class="laser" name="scan">
+            <pose_3d>0 0 1.2 0 0 0</pose_3d>
+            <fov_degrees>360</fov_degrees>
+            <sensor_period>0.05</sensor_period>
+            <nrays>360</nrays>
+            <max_range>25.0</max_range>
+            <min_range>0.1</min_range>
             <raytrace_3d>false</raytrace_3d>
+            <publish_topic>/scan</publish_topic>
+        </sensor>
+
+        <!-- LIDAR frontal corto alcance (detección obstáculos) -->
+        <sensor class="laser" name="front_proximity">
+            <pose_3d>1.2 0 0.4 0 0 0</pose_3d>
+            <fov_degrees>120</fov_degrees>
+            <sensor_period>0.05</sensor_period>
+            <nrays>60</nrays>
+            <max_range>5.0</max_range>
+            <min_range>0.05</min_range>
+            <raytrace_3d>false</raytrace_3d>
+            <publish_topic>/front_scan</publish_topic>
+        </sensor>
+
+        <!-- LIDAR trasero corto alcance (detección obstáculos) -->
+        <sensor class="laser" name="rear_proximity">
+            <pose_3d>-0.8 0 0.4 0 0 180</pose_3d>
+            <fov_degrees>120</fov_degrees>
+            <sensor_period>0.05</sensor_period>
+            <nrays>60</nrays>
+            <max_range>5.0</max_range>
+            <min_range>0.05</min_range>
+            <raytrace_3d>false</raytrace_3d>
+            <publish_topic>/rear_scan</publish_topic>
         </sensor>
 
         <!-- IMU -->
         <sensor class="imu" name="imu">
             <pose_3d>0 0 0.3 0 0 0</pose_3d>
-            <sensor_period>0.05</sensor_period>
+            <sensor_period>0.02</sensor_period>
         </sensor>
     </vehicle:class>
 
