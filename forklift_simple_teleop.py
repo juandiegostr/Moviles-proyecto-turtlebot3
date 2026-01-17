@@ -63,8 +63,26 @@ TURN_SPEED = 0.8        # rad/s para el giro
 GRASP_OFFSET_X = 1.5    # metros delante del forklift
 GRASP_OFFSET_Z = 0.15   # altura del pallet levantado
 
-# Lista de pallets disponibles
-PALLET_NAMES = [f'pallet_{i}' for i in range(1, 14)]
+# Lista de pallets disponibles con sus posiciones iniciales
+PALLET_POSITIONS = {
+    'pallet_1': (-17.0, 8.0),
+    'pallet_2': (-15.0, 8.0),
+    'pallet_3': (-13.0, 8.0),
+    'pallet_4': (-17.0, 5.0),
+    'pallet_5': (-15.0, 5.0),
+    'pallet_6': (-17.0, -8.0),
+    'pallet_7': (-15.0, -8.0),
+    'pallet_8': (-13.0, -8.0),
+    'pallet_9': (-17.0, -5.0),
+    'pallet_10': (4.0, 6.0),
+    'pallet_11': (4.0, 4.8),
+    'pallet_12': (12.0, -6.0),
+    'pallet_13': (12.0, -4.9),
+}
+PALLET_NAMES = list(PALLET_POSITIONS.keys())
+
+# Distancia máxima para enganchar un pallet (metros)
+MAX_GRASP_DISTANCE = 3.0
 
 
 class PalletGrasper:
@@ -82,6 +100,9 @@ class PalletGrasper:
         self.forklift_y = 0.0
         self.forklift_yaw = 0.0
         
+        # Posiciones actuales de los pallets (se actualizan cuando se mueven)
+        self.pallet_positions = dict(PALLET_POSITIONS)
+        
     def connect(self):
         """Conecta al servidor mvsim"""
         if not MVSIM_AVAILABLE:
@@ -97,6 +118,19 @@ class PalletGrasper:
             print(f"⚠️  Error conectando a mvsim: {e}")
             self.connected = False
             return False
+    
+    def find_nearest_pallet(self):
+        """Encuentra el pallet más cercano al forklift"""
+        nearest = None
+        min_dist = float('inf')
+        
+        for pallet_name, (px, py) in self.pallet_positions.items():
+            dist = math.sqrt((px - self.forklift_x)**2 + (py - self.forklift_y)**2)
+            if dist < min_dist:
+                min_dist = dist
+                nearest = pallet_name
+        
+        return nearest, min_dist
     
     def set_object_pose(self, name, x, y, z, yaw):
         """Mueve un objeto a una posición"""
@@ -131,6 +165,21 @@ class PalletGrasper:
         self.update_thread.start()
         return True, f"Pallet '{pallet_name}' enganchado"
     
+    def grasp_nearest(self):
+        """Engancha el pallet más cercano"""
+        if self.grasped_pallet:
+            return False, f"Ya tienes enganchado: {self.grasped_pallet}"
+        
+        nearest, dist = self.find_nearest_pallet()
+        
+        if nearest is None:
+            return False, "No se encontraron pallets"
+        
+        if dist > MAX_GRASP_DISTANCE:
+            return False, f"Pallet más cercano ({nearest}) está a {dist:.1f}m (máx: {MAX_GRASP_DISTANCE}m)"
+        
+        return self.grasp(nearest)
+    
     def release(self):
         """Desengancha el pallet actual"""
         if not self.grasped_pallet:
@@ -161,6 +210,9 @@ class PalletGrasper:
                 # Posición del pallet delante del forklift
                 global_x = self.forklift_x + GRASP_OFFSET_X * cos_yaw
                 global_y = self.forklift_y + GRASP_OFFSET_X * sin_yaw
+                
+                # Actualizar posición guardada del pallet
+                self.pallet_positions[self.grasped_pallet] = (global_x, global_y)
                 
                 self.set_object_pose(
                     self.grasped_pallet,
@@ -299,6 +351,10 @@ class ForkliftSimpleTeleop(Node):
         """Engancha un pallet específico"""
         return self.grasper.grasp(pallet_name)
     
+    def grasp_nearest_pallet(self):
+        """Engancha el pallet más cercano"""
+        return self.grasper.grasp_nearest()
+    
     def release_pallet(self):
         """Suelta el pallet enganchado"""
         return self.grasper.release()
@@ -376,6 +432,11 @@ def main():
         while node.running:
             key = get_key(settings)
             
+            # Ignorar teclas vacías
+            if not key:
+                print_status(node)
+                continue
+            
             if key == '\x1b':  # ESC
                 print("\n\n🛑 Saliendo...")
                 break
@@ -396,8 +457,8 @@ def main():
                 node.stop()
                 
             elif key.lower() == 'g':
-                # Enganchar el pallet_1 por defecto (o el más cercano)
-                success, msg = node.grasp_pallet('pallet_1')
+                # Enganchar el pallet más cercano
+                success, msg = node.grasp_nearest_pallet()
                 print(f"\n{'✅' if success else '❌'} {msg}")
                 
             elif key.lower() == 'h':
@@ -405,10 +466,9 @@ def main():
                 success, msg = node.release_pallet()
                 print(f"\n{'✅' if success else '❌'} {msg}")
                 
-            elif key in '123456789':
-                # Enganchar pallet específico
-                pallet_num = int(key)
-                pallet_name = f'pallet_{pallet_num}'
+            elif key.isdigit() and key != '0':
+                # Enganchar pallet específico (1-9)
+                pallet_name = f'pallet_{key}'
                 success, msg = node.grasp_pallet(pallet_name)
                 print(f"\n{'✅' if success else '❌'} {msg}")
             

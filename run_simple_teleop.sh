@@ -1,13 +1,55 @@
 #!/bin/bash
-# Script para ejecutar el teleop simple del forklift
+# ═══════════════════════════════════════════════════════════════
+#  🚜 FORKLIFT SIMPLE TELEOP - Control Preciso con Agarre
+# ═══════════════════════════════════════════════════════════════
 
-cd /root/ros2_ws
-source install/setup.bash
-
-echo "🚜 Iniciando Forklift Simple Teleop..."
+echo "╔════════════════════════════════════════════════════════╗"
+echo "║       🚜 FORKLIFT SIMPLE TELEOP 🚜                     ║"
+echo "║       Control preciso + Enganche de pallets            ║"
+echo "╚════════════════════════════════════════════════════════╝"
 echo ""
-echo "Asegúrate de que mvsim esté corriendo en otra terminal:"
-echo "  ros2 launch forklift_robot forklift_mvsim.launch.py"
+
+# Verificar que existe el mundo
+WORLD_FILE="/root/ros2_ws/src/mvsim_warehouse.xml"
+if [ ! -f "$WORLD_FILE" ]; then
+    echo "❌ Error: No se encuentra $WORLD_FILE"
+    exit 1
+fi
+
+# Source ROS2
+source /opt/ros/humble/setup.bash
+source /root/ros2_ws/install/setup.bash 2>/dev/null
+
+echo "🌍 Lanzando simulador mvsim..."
 echo ""
 
-python3 src/forklift_simple_teleop.py
+# Lanzar mvsim en background
+ros2 launch mvsim launch_world.launch.py \
+    world_file:=$WORLD_FILE \
+    headless:=False \
+    do_fake_localization:=True &
+
+MVSIM_PID=$!
+
+# Esperar a que mvsim esté listo
+echo "⏳ Esperando a que mvsim inicie (5 segundos)..."
+sleep 5
+
+# Verificar que mvsim está corriendo
+if ! ps -p $MVSIM_PID > /dev/null 2>&1; then
+    echo "❌ Error: mvsim no se inició correctamente"
+    exit 1
+fi
+
+echo "✅ mvsim iniciado correctamente"
+echo ""
+
+# Lanzar teleop
+python3 /root/ros2_ws/src/forklift_simple_teleop.py
+
+# Cuando el usuario salga, cerrar mvsim
+echo "🛑 Cerrando simulación..."
+kill $MVSIM_PID 2>/dev/null
+wait $MVSIM_PID 2>/dev/null
+
+echo "✅ Todo cerrado correctamente."
