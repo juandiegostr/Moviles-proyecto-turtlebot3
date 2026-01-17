@@ -1,0 +1,29 @@
+/root/ros2_ws/
+│
+├── 📂 src/
+│   │
+│   ├── 🚜 TELEOPERACIÓN (run_simple_teleop.sh)
+│   │   ├── run_simple_teleop.sh          # Script principal para teleoperar
+│   │   ├── forklift_simple_teleop.py     # Código Python del teleop (W/A/S/D + G/H pallets)
+│   │   └── mvsim_warehouse.xml           # Mundo del simulador (almacén, pallets, forklift)
+│   │
+│   ├── 🗺️ MAPEADO (run_mapping.sh)
+│   │   ├── run_mapping.sh                # Script para crear mapas con slam_toolbox
+│   │   └── config/
+│   │       └── slam.yaml                 # Configuración de slam_toolbox
+│   │
+│   ├── 📜 OTROS SCRIPTS
+│   │   ├── run_forklift.sh               # Teleop original (más simple)
+│   │   ├── forklift_teleop.py            # Teleop original
+│   │   ├── forklift_with_grasp.py        # Versión con navegación automática
+│   │   ├── save_map.sh                   # Guardar mapa del simulador
+│   │   └── diagnose_slam.py              # Diagnóstico de topics
+│   │
+│   └── 📂 config/
+│       ├── slam.yaml                     # Config slam_toolbox
+│       ├── slam_rviz.rviz                # Config RViz para SLAM
+│       └── forklift_cartographer.lua     # Config Cartographer (no usado)
+│
+└── 📂 maps/                              # 🗺️ MAPAS GUARDADOS
+    ├── warehouse.pgm                     # ✅ Tu mapa (imagen)
+    └── warehouse.yaml                    # ✅ Tu mapa (metadatos)
