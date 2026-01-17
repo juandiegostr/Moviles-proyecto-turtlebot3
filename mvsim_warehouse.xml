@@ -372,19 +372,7 @@
     <block class="pallet_jack"> <init_pose>-10 12 90</init_pose> </block>
     <block class="pallet_jack"> <init_pose>-8 -12 -80</init_pose> </block>
 
-    <!-- Pallet Jack animado (trabajador virtual) -->
-    <block class="pallet_jack"> 
-        <init_pose>0 0 0</init_pose>
-        <animation type="keyframes">
-            <time_pose>0.0   20 0 180</time_pose>
-            <time_pose>15.0  -5 0 180</time_pose>
-            <time_pose>17.0  -5 0 180</time_pose>
-            <time_pose>20.0  -5 0 0</time_pose>
-            <time_pose>35.0  20 0 0</time_pose>
-            <time_pose>37.0  20 0 0</time_pose>
-            <time_pose>40.0  20 0 180</time_pose>
-        </animation>
-    </block>
+    <!-- Pallet Jack animado eliminado -->
 
     <!-- ===== ESCALERAS DE EMERGENCIA ===== -->
     <block class="stairs"> <init_pose>-18 -13 -90</init_pose> </block>
@@ -401,10 +389,6 @@
     <block class="chair"> <init_pose>-18 12 90</init_pose> </block>
     <block class="chair"> <init_pose>-18 10 90</init_pose> </block>
 
-    <!-- ===== COLUMNAS ESTRUCTURALES ===== -->
-    <block class="pillar"> <init_pose>-10 0 0</init_pose> </block>
-    <block class="pillar"> <init_pose>0 0 0</init_pose> </block>
-    <block class="pillar"> <init_pose>10 0 0</init_pose> </block>
-    <block class="pillar"> <init_pose>20 0 0</init_pose> </block>
+    <!-- Columnas estructurales eliminadas -->
 
 </mvsim_world>
