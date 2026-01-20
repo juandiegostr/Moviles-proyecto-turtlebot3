@@ -116,20 +116,31 @@ class PalletGrasper:
     
     def find_pallet_by_name(self, name):
         """Busca un pallet por nombre (parcial o completo)"""
-        name_lower = name.lower().replace('_', '').replace('-', '').replace(' ', '')
+        import re
         
+        # Primero, buscar match exacto (ignorando mayúsculas)
+        name_normalized = name.lower().strip()
         for pallet_name in self.pallet_positions.keys():
-            pallet_lower = pallet_name.lower().replace('_', '')
-            if name_lower in pallet_lower or pallet_lower in name_lower:
+            if pallet_name.lower() == name_normalized:
                 return pallet_name
         
-        # Buscar por número
-        import re
+        # Buscar por número exacto (ej: PALLET_10 -> buscar pallet_10, no pallet_1)
         numbers = re.findall(r'\d+', name)
         if numbers:
-            num = numbers[0]
-            for pallet_name in self.pallet_positions.keys():
-                if num in pallet_name:
+            # Usar el número completo (ej: "10", no "1")
+            num = numbers[-1]  # Tomar el último número encontrado
+            target_name = f"pallet_{num}"
+            if target_name in self.pallet_positions:
+                return target_name
+        
+        # Si no encontró match exacto, buscar si el nombre contiene "pallet" + número
+        for pallet_name in self.pallet_positions.keys():
+            # Extraer número del pallet
+            pallet_nums = re.findall(r'\d+', pallet_name)
+            name_nums = re.findall(r'\d+', name)
+            if pallet_nums and name_nums:
+                # Match solo si los números son exactamente iguales
+                if pallet_nums[-1] == name_nums[-1]:
                     return pallet_name
         
         return None
@@ -396,18 +407,21 @@ class ForkliftRouteExecutor(Node):
         pallet_name = self.grasper.find_pallet_by_name(name)
         
         if pallet_name:
-            self.get_logger().info(f'🎯 Pallet identificado: {pallet_name}')
+            self.get_logger().info(f'🎯 Waypoint "{name}" -> Pallet mvsim: "{pallet_name}"')
             success, msg = self.grasper.grasp(pallet_name)
         else:
             # Si no se encuentra por nombre, buscar el más cercano
-            self.get_logger().info(f'🔍 Buscando pallet más cercano...')
+            self.get_logger().warn(f'⚠️ No se encontró pallet con nombre "{name}", buscando el más cercano...')
             success, msg = self.grasper.grasp_nearest()
         
         self.get_logger().info(msg)
         
         if success:
-            self.publish_status("CARRYING", f"Transportando pallet")
+            self.get_logger().info(f'✅ Pallet enganchado correctamente: {self.grasper.grasped_pallet}')
+            self.publish_status("CARRYING", f"Transportando {self.grasper.grasped_pallet}")
             time.sleep(0.5)  # Pequeña pausa para visualizar
+        else:
+            self.get_logger().error(f'❌ No se pudo enganchar el pallet')
         
         return success
     
