@@ -1,0 +1,152 @@
+{
+  "nodes": {
+    "1": {
+      "x": -15.0,
+      "y": 0.0,
+      "name": "HOME",
+      "type": "home"
+    },
+    "2": {
+      "x": -17.0,
+      "y": 8.0,
+      "name": "PALLET_1",
+      "type": "pallet"
+    },
+    "3": {
+      "x": -15.0,
+      "y": 8.0,
+      "name": "PALLET_2",
+      "type": "pallet"
+    },
+    "4": {
+      "x": -13.0,
+      "y": 8.0,
+      "name": "PALLET_3",
+      "type": "pallet"
+    },
+    "5": {
+      "x": -17.0,
+      "y": 5.0,
+      "name": "PALLET_4",
+      "type": "pallet"
+    },
+    "6": {
+      "x": -15.0,
+      "y": 5.0,
+      "name": "PALLET_5",
+      "type": "pallet"
+    },
+    "7": {
+      "x": -17.0,
+      "y": -8.0,
+      "name": "PALLET_6",
+      "type": "pallet"
+    },
+    "8": {
+      "x": -15.0,
+      "y": -8.0,
+      "name": "PALLET_7",
+      "type": "pallet"
+    },
+    "9": {
+      "x": -13.0,
+      "y": -8.0,
+      "name": "PALLET_8",
+      "type": "pallet"
+    },
+    "10": {
+      "x": -17.0,
+      "y": -5.0,
+      "name": "PALLET_9",
+      "type": "pallet"
+    },
+    "11": {
+      "x": 4.0,
+      "y": 6.0,
+      "name": "PALLET_10",
+      "type": "pallet"
+    },
+    "12": {
+      "x": 4.0,
+      "y": 4.8,
+      "name": "PALLET_11",
+      "type": "pallet"
+    },
+    "13": {
+      "x": 12.0,
+      "y": -6.0,
+      "name": "PALLET_12",
+      "type": "pallet"
+    },
+    "14": {
+      "x": 12.0,
+      "y": -4.9,
+      "name": "PALLET_13",
+      "type": "pallet"
+    },
+    "23": {
+      "x": -10.35,
+      "y": -1.0999999999999996,
+      "name": "WP_23",
+      "type": "waypoint"
+    },
+    "24": {
+      "x": -6.35,
+      "y": -2.3000000000000007,
+      "name": "WP_24",
+      "type": "waypoint"
+    },
+    "25": {
+      "x": -2.5,
+      "y": -2.9000000000000004,
+      "name": "WP_25",
+      "type": "waypoint"
+    },
+    "26": {
+      "x": 3.8500000000000014,
+      "y": -0.34999999999999964,
+      "name": "WP_26",
+      "type": "waypoint"
+    },
+    "28": {
+      "x": 3.6499999999999986,
+      "y": 2.0,
+      "name": "WP_28",
+      "type": "waypoint"
+    }
+  },
+  "route": [
+    {
+      "node_id": 1,
+      "action": "none"
+    },
+    {
+      "node_id": 23,
+      "action": "none"
+    },
+    {
+      "node_id": 24,
+      "action": "none"
+    },
+    {
+      "node_id": 25,
+      "action": "none"
+    },
+    {
+      "node_id": 26,
+      "action": "none"
+    },
+    {
+      "node_id": 28,
+      "action": "none"
+    },
+    {
+      "node_id": 1,
+      "action": "none"
+    },
+    {
+      "node_id": 23,
+      "action": "none"
+    }
+  ]
+}
