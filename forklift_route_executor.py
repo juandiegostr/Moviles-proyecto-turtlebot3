@@ -5,7 +5,7 @@
 ║                                                                               ║
 ║   Nodo ROS2 que ejecuta rutas planificadas con el Route Planner.              ║
 ║   Lee el archivo de ruta JSON y navega a cada waypoint, ejecutando            ║
-║   las acciones de recoger/soltar pallets según corresponda.                   ║
+║   las acciones de recoger/soltar pallets usando la API de mvsim.              ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 """
@@ -20,6 +20,16 @@ import time
 import json
 import os
 import sys
+import threading
+
+# Cliente mvsim para mover objetos (agarre de pallets)
+try:
+    from mvsim_comms import pymvsim_comms
+    from mvsim_msgs import SrvSetPose_pb2, SrvGetPose_pb2
+    MVSIM_AVAILABLE = True
+except ImportError:
+    MVSIM_AVAILABLE = False
+    print("⚠️  mvsim_comms no disponible - función de agarre será simulada")
 
 # Configuración
 DEFAULT_ROUTE_FILE = "/root/ros2_ws/src/ruta3.json"
@@ -33,8 +43,207 @@ MAX_LINEAR_VEL = 0.8   # m/s
 MAX_ANGULAR_VEL = 0.7  # rad/s
 APPROACH_VEL = 0.3     # m/s (velocidad de aproximación)
 
-# Distancias para pick/drop
-FORK_INSERT_DISTANCE = 1.2  # metros para insertar horquillas
+# Offset del pallet cuando está enganchado
+GRASP_OFFSET_X = 1.5    # metros delante del forklift
+GRASP_OFFSET_Z = 0.15   # altura del pallet levantado
+
+# Lista de pallets disponibles
+PALLET_POSITIONS = {
+    'pallet_1': (-17.0, 8.0),
+    'pallet_2': (-15.0, 8.0),
+    'pallet_3': (-13.0, 8.0),
+    'pallet_4': (-17.0, 5.0),
+    'pallet_5': (-15.0, 5.0),
+    'pallet_6': (-17.0, -8.0),
+    'pallet_7': (-15.0, -8.0),
+    'pallet_8': (-13.0, -8.0),
+    'pallet_9': (-17.0, -5.0),
+    'pallet_10': (4.0, 6.0),
+    'pallet_11': (4.0, 4.8),
+    'pallet_12': (12.0, -6.0),
+    'pallet_13': (12.0, -4.9),
+}
+
+
+class PalletGrasper:
+    """Maneja el enganche y desenganche de pallets via mvsim API"""
+    
+    def __init__(self):
+        self.client = None
+        self.connected = False
+        self.grasped_pallet = None
+        self.running = False
+        self.update_thread = None
+        
+        # Posición del forklift
+        self.forklift_x = 0.0
+        self.forklift_y = 0.0
+        self.forklift_yaw = 0.0
+        
+        # Posiciones actuales de los pallets
+        self.pallet_positions = dict(PALLET_POSITIONS)
+        
+    def connect(self):
+        """Conecta al servidor mvsim"""
+        if not MVSIM_AVAILABLE:
+            print("⚠️  mvsim_comms no disponible")
+            return False
+            
+        try:
+            self.client = pymvsim_comms.mvsim.Client()
+            self.client.setName("forklift_route_executor_grasper")
+            self.client.connect()
+            self.connected = True
+            print("✅ Sistema de agarre conectado a mvsim")
+            return True
+        except Exception as e:
+            print(f"⚠️  Error conectando a mvsim: {e}")
+            self.connected = False
+            return False
+    
+    def find_nearest_pallet(self):
+        """Encuentra el pallet más cercano al forklift"""
+        nearest = None
+        min_dist = float('inf')
+        
+        for pallet_name, (px, py) in self.pallet_positions.items():
+            dist = math.sqrt((px - self.forklift_x)**2 + (py - self.forklift_y)**2)
+            if dist < min_dist:
+                min_dist = dist
+                nearest = pallet_name
+        
+        return nearest, min_dist
+    
+    def find_pallet_by_name(self, name):
+        """Busca un pallet por nombre (parcial o completo)"""
+        name_lower = name.lower().replace('_', '').replace('-', '').replace(' ', '')
+        
+        for pallet_name in self.pallet_positions.keys():
+            pallet_lower = pallet_name.lower().replace('_', '')
+            if name_lower in pallet_lower or pallet_lower in name_lower:
+                return pallet_name
+        
+        # Buscar por número
+        import re
+        numbers = re.findall(r'\d+', name)
+        if numbers:
+            num = numbers[0]
+            for pallet_name in self.pallet_positions.keys():
+                if num in pallet_name:
+                    return pallet_name
+        
+        return None
+    
+    def set_object_pose(self, name, x, y, z, yaw):
+        """Mueve un objeto a una posición"""
+        if not self.connected:
+            return False
+        try:
+            req = SrvSetPose_pb2.SrvSetPose()
+            req.objectId = name
+            req.pose.x = x
+            req.pose.y = y
+            req.pose.z = z
+            req.pose.yaw = yaw
+            req.pose.pitch = 0.0
+            req.pose.roll = 0.0
+            self.client.callService('set_pose', req.SerializeToString())
+            return True
+        except Exception as e:
+            print(f"⚠️  Error moviendo objeto: {e}")
+            return False
+    
+    def grasp(self, pallet_name):
+        """Engancha un pallet específico"""
+        if self.grasped_pallet:
+            return False, f"Ya tienes enganchado: {self.grasped_pallet}"
+        
+        if not self.connected:
+            if not self.connect():
+                return False, "No conectado a mvsim"
+        
+        # Verificar que el pallet existe
+        if pallet_name not in self.pallet_positions:
+            return False, f"Pallet '{pallet_name}' no existe"
+        
+        self.grasped_pallet = pallet_name
+        self.running = True
+        self.update_thread = threading.Thread(target=self._update_loop, daemon=True)
+        self.update_thread.start()
+        return True, f"✅ Pallet '{pallet_name}' ENGANCHADO"
+    
+    def grasp_nearest(self):
+        """Engancha el pallet más cercano"""
+        if self.grasped_pallet:
+            return False, f"Ya tienes enganchado: {self.grasped_pallet}"
+        
+        nearest, dist = self.find_nearest_pallet()
+        
+        if nearest is None:
+            return False, "No se encontraron pallets"
+        
+        if dist > 3.0:
+            return False, f"Pallet más cercano ({nearest}) está a {dist:.1f}m (máx: 3.0m)"
+        
+        return self.grasp(nearest)
+    
+    def release(self):
+        """Desengancha el pallet actual y lo deja en el suelo"""
+        if not self.grasped_pallet:
+            return False, "No hay pallet enganchado"
+        
+        released = self.grasped_pallet
+        
+        # Detener el hilo de actualización
+        self.running = False
+        if self.update_thread:
+            self.update_thread.join(timeout=0.5)
+        
+        # Dejar el pallet en el suelo (z=0)
+        if self.connected:
+            cos_yaw = math.cos(self.forklift_yaw)
+            sin_yaw = math.sin(self.forklift_yaw)
+            final_x = self.forklift_x + GRASP_OFFSET_X * cos_yaw
+            final_y = self.forklift_y + GRASP_OFFSET_X * sin_yaw
+            
+            self.set_object_pose(released, final_x, final_y, 0.08, self.forklift_yaw)
+            
+            # Actualizar posición guardada
+            self.pallet_positions[released] = (final_x, final_y)
+        
+        self.grasped_pallet = None
+        return True, f"✅ Pallet '{released}' SOLTADO"
+    
+    def update_forklift_pose(self, x, y, yaw):
+        """Actualiza la posición del forklift"""
+        self.forklift_x = x
+        self.forklift_y = y
+        self.forklift_yaw = yaw
+    
+    def _update_loop(self):
+        """Actualiza la posición del pallet enganchado continuamente"""
+        while self.running and self.grasped_pallet:
+            try:
+                cos_yaw = math.cos(self.forklift_yaw)
+                sin_yaw = math.sin(self.forklift_yaw)
+                
+                # Posición del pallet delante del forklift
+                global_x = self.forklift_x + GRASP_OFFSET_X * cos_yaw
+                global_y = self.forklift_y + GRASP_OFFSET_X * sin_yaw
+                
+                # Actualizar posición guardada del pallet
+                self.pallet_positions[self.grasped_pallet] = (global_x, global_y)
+                
+                self.set_object_pose(
+                    self.grasped_pallet,
+                    global_x,
+                    global_y,
+                    GRASP_OFFSET_Z,
+                    self.forklift_yaw
+                )
+                time.sleep(0.02)  # 50 Hz
+            except:
+                time.sleep(0.1)
 
 
 class ForkliftRouteExecutor(Node):
@@ -62,11 +271,13 @@ class ForkliftRouteExecutor(Node):
         self.odom_received = False
         
         # Estado de la misión
-        self.carrying_pallet = False
         self.current_step = 0
         self.route = []
         self.paused = False
         self.abort = False
+        
+        # Sistema de agarre de pallets (REAL)
+        self.grasper = PalletGrasper()
         
         self.get_logger().info('🚜 Forklift Route Executor iniciado!')
         self.publish_status("IDLE", "Esperando ruta...")
@@ -79,7 +290,7 @@ class ForkliftRouteExecutor(Node):
             'message': message,
             'step': self.current_step,
             'total_steps': len(self.route),
-            'carrying_pallet': self.carrying_pallet,
+            'carrying_pallet': self.grasper.grasped_pallet,
             'position': {'x': self.current_x, 'y': self.current_y, 'yaw': self.current_yaw}
         })
         self.status_pub.publish(msg)
@@ -96,6 +307,9 @@ class ForkliftRouteExecutor(Node):
         self.current_yaw = math.atan2(siny_cosp, cosy_cosp)
         
         self.odom_received = True
+        
+        # Actualizar posición en el grasper
+        self.grasper.update_forklift_pose(self.current_x, self.current_y, self.current_yaw)
         
     def get_distance_to(self, target_x, target_y):
         """Calcula la distancia al objetivo"""
@@ -154,19 +368,15 @@ class ForkliftRouteExecutor(Node):
             
             # Si el ángulo es grande, primero girar
             if abs(angle_error) > ANGLE_TOLERANCE:
-                # Girar hacia el objetivo
                 msg.angular.z = max(-MAX_ANGULAR_VEL, min(MAX_ANGULAR_VEL, angle_error * 2.0))
-                # Avanzar un poco si el ángulo no es muy grande
                 if abs(angle_error) < 0.5:
                     msg.linear.x = max_vel * 0.3
             else:
-                # Avanzar hacia el objetivo
                 msg.linear.x = min(max_vel, distance * 0.5)
-                msg.angular.z = angle_error * 1.0  # Corrección pequeña
+                msg.angular.z = angle_error * 1.0
             
             self.cmd_pub.publish(msg)
             
-            # Log de progreso
             self.get_logger().info(
                 f'   📊 Dist: {distance:.1f}m | Ang: {math.degrees(angle_error):.0f}°',
                 throttle_duration_sec=1.0
@@ -176,98 +386,45 @@ class ForkliftRouteExecutor(Node):
         
         return False
     
-    def align_to_angle(self, target_yaw):
-        """Gira para alinearse con un ángulo específico"""
-        self.get_logger().info(f'🎯 Alineando a {math.degrees(target_yaw):.0f}°')
-        
-        while rclpy.ok() and not self.abort:
-            rclpy.spin_once(self, timeout_sec=0.05)
-            
-            angle_error = self.normalize_angle(target_yaw - self.current_yaw)
-            
-            if abs(angle_error) < ANGLE_TOLERANCE:
-                self.stop()
-                self.get_logger().info(f'✅ Alineado!')
-                return True
-            
-            msg = Twist()
-            msg.angular.z = max(-MAX_ANGULAR_VEL, min(MAX_ANGULAR_VEL, angle_error * 2.0))
-            self.cmd_pub.publish(msg)
-            
-        return False
-    
-    def move_forward(self, distance, speed=APPROACH_VEL):
-        """Avanza (o retrocede si es negativo) una distancia específica"""
-        direction = "Avanzando" if distance > 0 else "Retrocediendo"
-        self.get_logger().info(f'🚜 {direction} {abs(distance):.1f}m...')
-        
-        start_x = self.current_x
-        start_y = self.current_y
-        target_distance = abs(distance)
-        
-        while rclpy.ok() and not self.abort:
-            rclpy.spin_once(self, timeout_sec=0.05)
-            
-            traveled = math.sqrt((self.current_x - start_x)**2 + (self.current_y - start_y)**2)
-            
-            if traveled >= target_distance - 0.05:
-                self.stop()
-                self.get_logger().info(f'✅ Movimiento completado!')
-                return True
-            
-            msg = Twist()
-            msg.linear.x = speed if distance > 0 else -speed
-            self.cmd_pub.publish(msg)
-            
-        return False
-    
     def execute_pick(self, waypoint):
         """Ejecuta acción de recoger pallet"""
         name = waypoint.get('name', 'pallet')
-        self.get_logger().info(f'📦 === RECOGIENDO {name} ===')
-        self.publish_status("PICKING", f"Recogiendo {name}")
+        self.get_logger().info(f'📦 === RECOGIENDO EN {name} ===')
+        self.publish_status("PICKING", f"Recogiendo en {name}")
         
-        if self.carrying_pallet:
-            self.get_logger().warn('⚠️ Ya tienes un pallet! Soltándolo primero...')
-            self.execute_drop(waypoint)
+        # Buscar el pallet por nombre
+        pallet_name = self.grasper.find_pallet_by_name(name)
         
-        # 1. Avanzar para insertar horquillas
-        self.get_logger().info('🔧 Insertando horquillas...')
-        self.move_forward(FORK_INSERT_DISTANCE, APPROACH_VEL)
+        if pallet_name:
+            self.get_logger().info(f'🎯 Pallet identificado: {pallet_name}')
+            success, msg = self.grasper.grasp(pallet_name)
+        else:
+            # Si no se encuentra por nombre, buscar el más cercano
+            self.get_logger().info(f'🔍 Buscando pallet más cercano...')
+            success, msg = self.grasper.grasp_nearest()
         
-        # 2. Simular levantar pallet
-        self.get_logger().info('⬆️ Levantando pallet...')
-        time.sleep(1.5)
+        self.get_logger().info(msg)
         
-        self.carrying_pallet = True
-        self.get_logger().info(f'✅ {name} recogido!')
-        self.publish_status("CARRYING", f"Transportando {name}")
+        if success:
+            self.publish_status("CARRYING", f"Transportando pallet")
+            time.sleep(0.5)  # Pequeña pausa para visualizar
         
-        return True
+        return success
     
     def execute_drop(self, waypoint):
         """Ejecuta acción de soltar pallet"""
         name = waypoint.get('name', 'posición')
-        self.get_logger().info(f'📤 === SOLTANDO PALLET en {name} ===')
+        self.get_logger().info(f'📤 === SOLTANDO PALLET EN {name} ===')
         self.publish_status("DROPPING", f"Soltando en {name}")
         
-        if not self.carrying_pallet:
-            self.get_logger().warn('⚠️ No hay pallet que soltar!')
-            return False
+        success, msg = self.grasper.release()
+        self.get_logger().info(msg)
         
-        # 1. Simular bajar pallet
-        self.get_logger().info('⬇️ Bajando pallet...')
-        time.sleep(1.0)
+        if success:
+            self.publish_status("EMPTY", "Sin pallet")
+            time.sleep(0.5)
         
-        # 2. Retroceder para sacar horquillas
-        self.get_logger().info('🔧 Retirando horquillas...')
-        self.move_forward(-FORK_INSERT_DISTANCE, APPROACH_VEL)
-        
-        self.carrying_pallet = False
-        self.get_logger().info(f'✅ Pallet dejado en {name}!')
-        self.publish_status("EMPTY", "Sin pallet")
-        
-        return True
+        return success
     
     def load_route(self, filepath):
         """Carga una ruta desde archivo JSON"""
@@ -281,11 +438,9 @@ class ForkliftRouteExecutor(Node):
             
             # Verificar si es formato del planificador (con nodes y route)
             if isinstance(data, dict) and 'nodes' in data and 'route' in data:
-                # Formato del Route Planner
                 nodes = {int(k): v for k, v in data['nodes'].items()}
                 route_steps = data['route']
                 
-                # Convertir a formato ejecutable
                 self.route = []
                 for step in route_steps:
                     node_id = step['node_id']
@@ -300,7 +455,6 @@ class ForkliftRouteExecutor(Node):
                     else:
                         self.get_logger().warn(f'⚠️ Nodo {node_id} no encontrado, saltando...')
             elif isinstance(data, list):
-                # Formato simple (lista de waypoints)
                 self.route = data
             else:
                 self.get_logger().error('❌ Formato de archivo no reconocido')
@@ -345,6 +499,9 @@ class ForkliftRouteExecutor(Node):
             
             self.get_logger().info(f'\n{"="*50}')
             self.get_logger().info(f'📍 PASO {i+1}/{len(self.route)}: {name}')
+            if action != 'none':
+                action_text = "📦 RECOGER" if action == 'pick' else "📤 SOLTAR"
+                self.get_logger().info(f'   Acción: {action_text}')
             self.get_logger().info(f'{"="*50}')
             
             # Navegar al waypoint
@@ -369,6 +526,8 @@ class ForkliftRouteExecutor(Node):
         if not self.abort:
             self.get_logger().info('\n' + '='*60)
             self.get_logger().info('🎉 ¡RUTA COMPLETADA EXITOSAMENTE!')
+            if self.grasper.grasped_pallet:
+                self.get_logger().info(f'📦 Nota: Aún tienes enganchado: {self.grasper.grasped_pallet}')
             self.get_logger().info('='*60)
             self.publish_status("COMPLETED", "Ruta completada!")
         else:
@@ -378,10 +537,11 @@ class ForkliftRouteExecutor(Node):
 
 
 def print_banner():
-    """Imprime el banner del programa"""
     print("""
 ╔═══════════════════════════════════════════════════════════════════════════════╗
 ║           🚜 FORKLIFT ROUTE EXECUTOR - EJECUTOR DE RUTAS 🚜                   ║
+║                                                                               ║
+║   Ejecuta rutas con AGARRE REAL de pallets usando mvsim API                  ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 """)
 
@@ -400,10 +560,14 @@ def main():
     print(f"\n📂 Archivo de ruta: {route_file}")
     
     if not node.load_route(route_file):
-        print("❌ No se pudo cargar la ruta. Asegúrate de crear una ruta con el Route Planner.")
+        print("❌ No se pudo cargar la ruta.")
         node.destroy_node()
         rclpy.shutdown()
         return
+    
+    # Conectar sistema de agarre
+    print("\n🔧 Conectando sistema de agarre...")
+    node.grasper.connect()
     
     # Esperar odometría
     print("\n⏳ Esperando conexión con la simulación...")
@@ -412,7 +576,7 @@ def main():
     
     print(f"✅ Conectado! Posición actual: ({node.current_x:.1f}, {node.current_y:.1f})")
     
-    # Menú interactivo
+    # Menú
     print("\n" + "-"*50)
     print("Comandos:")
     print("  ENTER : Iniciar ejecución de ruta")
@@ -421,9 +585,6 @@ def main():
     print("  q     : Salir")
     print("-"*50)
     
-    import threading
-    
-    # Flag para controlar el hilo
     running = True
     
     def input_handler():
@@ -435,12 +596,11 @@ def main():
                     if not node.route:
                         print("❌ No hay ruta cargada")
                     else:
-                        # Ejecutar en hilo separado
                         exec_thread = threading.Thread(target=node.execute_route)
                         exec_thread.start()
                 elif cmd == 'p':
                     node.paused = not node.paused
-                    state = "PAUSADO ⏸️" if node.paused else "REANUDADO ▶️"
+                    state = "⏸️ PAUSADO" if node.paused else "▶️ REANUDADO"
                     print(f"\n{state}")
                 elif cmd == 'a':
                     node.abort = True
@@ -452,11 +612,9 @@ def main():
             except EOFError:
                 break
     
-    # Iniciar hilo de entrada
     input_thread = threading.Thread(target=input_handler, daemon=True)
     input_thread.start()
     
-    # Spin principal
     try:
         while running and rclpy.ok():
             rclpy.spin_once(node, timeout_sec=0.1)
@@ -464,7 +622,17 @@ def main():
         pass
     
     running = False
-    node.stop()
+    
+    # Liberar pallet si está enganchado
+    if node.grasper.grasped_pallet:
+        print(f"\n📤 Soltando pallet {node.grasper.grasped_pallet}...")
+        node.grasper.release()
+    
+    try:
+        node.stop()
+    except:
+        pass
+    
     node.destroy_node()
     rclpy.shutdown()
     print("\n✅ Programa terminado.")
