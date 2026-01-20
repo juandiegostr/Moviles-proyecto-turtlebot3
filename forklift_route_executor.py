@@ -35,13 +35,14 @@ except ImportError:
 DEFAULT_ROUTE_FILE = "/root/ros2_ws/src/ruta3.json"
 
 # Tolerancias de navegación
-DISTANCE_TOLERANCE = 0.4  # metros
-ANGLE_TOLERANCE = 0.1     # radianes
+DISTANCE_TOLERANCE = 0.3       # metros - para puntos con acción (pick/drop)
+WAYPOINT_TOLERANCE = 1.5       # metros - para waypoints intermedios (paso sin parar)
+ANGLE_TOLERANCE = 0.15         # radianes
 
-# Velocidades
-MAX_LINEAR_VEL = 0.8   # m/s
-MAX_ANGULAR_VEL = 0.7  # rad/s
-APPROACH_VEL = 0.3     # m/s (velocidad de aproximación)
+# Velocidades (AUMENTADAS)
+MAX_LINEAR_VEL = 1.5           # m/s - velocidad máxima de crucero
+MAX_ANGULAR_VEL = 1.0          # rad/s - velocidad de giro
+APPROACH_VEL = 0.5             # m/s - velocidad de aproximación para pick/drop
 
 # Offset del pallet cuando está enganchado
 GRASP_OFFSET_X = 1.5    # metros delante del forklift
@@ -343,12 +344,25 @@ class ForkliftRouteExecutor(Node):
         msg = Twist()
         self.cmd_pub.publish(msg)
         
-    def navigate_to(self, target_x, target_y, name="", is_approach=False):
-        """Navega hacia una posición objetivo"""
-        self.get_logger().info(f'📍 Navegando a {name} ({target_x:.1f}, {target_y:.1f})')
-        self.publish_status("NAVIGATING", f"Navegando a {name}")
+    def navigate_to(self, target_x, target_y, name="", must_stop=True, next_target=None):
+        """
+        Navega hacia una posición objetivo.
         
-        max_vel = APPROACH_VEL if is_approach else MAX_LINEAR_VEL
+        Args:
+            target_x, target_y: Coordenadas del objetivo
+            name: Nombre del waypoint
+            must_stop: Si True, para completamente al llegar. Si False, pasa de largo.
+            next_target: Tupla (x, y) del siguiente waypoint para trayectoria suave
+        """
+        tolerance = DISTANCE_TOLERANCE if must_stop else WAYPOINT_TOLERANCE
+        max_vel = APPROACH_VEL if must_stop else MAX_LINEAR_VEL
+        
+        if must_stop:
+            self.get_logger().info(f'📍 Navegando a {name} ({target_x:.1f}, {target_y:.1f}) [PARADA]')
+        else:
+            self.get_logger().info(f'➡️ Pasando por {name} ({target_x:.1f}, {target_y:.1f}) [CONTINUO]')
+        
+        self.publish_status("NAVIGATING", f"Hacia {name}")
         
         while rclpy.ok() and not self.abort:
             if self.paused:
@@ -364,36 +378,51 @@ class ForkliftRouteExecutor(Node):
             distance = self.get_distance_to(target_x, target_y)
             
             # ¿Llegamos?
-            if distance < DISTANCE_TOLERANCE:
-                self.stop()
-                self.get_logger().info(f'✅ Llegamos a {name}! Distancia: {distance:.2f}m')
-                self.publish_status("ARRIVED", f"Llegamos a {name}")
+            if distance < tolerance:
+                if must_stop:
+                    self.stop()
+                    self.get_logger().info(f'✅ Llegamos a {name}!')
+                else:
+                    self.get_logger().info(f'✅ Pasando por {name}')
+                self.publish_status("ARRIVED", f"{name}")
                 return True
             
-            # Calcular ángulo hacia objetivo
-            target_angle = self.get_angle_to(target_x, target_y)
+            # Calcular ángulo hacia objetivo (o hacia el siguiente si estamos cerca)
+            if next_target and distance < 3.0 and not must_stop:
+                # Mirar hacia el siguiente waypoint para curva suave
+                blend = 1.0 - (distance / 3.0)
+                look_x = target_x + blend * (next_target[0] - target_x)
+                look_y = target_y + blend * (next_target[1] - target_y)
+                target_angle = self.get_angle_to(look_x, look_y)
+            else:
+                target_angle = self.get_angle_to(target_x, target_y)
+            
             angle_error = self.normalize_angle(target_angle - self.current_yaw)
             
             # Crear mensaje de velocidad
             msg = Twist()
             
-            # Si el ángulo es grande, primero girar
-            if abs(angle_error) > ANGLE_TOLERANCE:
+            # Control proporcional mejorado
+            if abs(angle_error) > 0.8:  # >45 grados: girar más agresivo
+                msg.angular.z = max(-MAX_ANGULAR_VEL, min(MAX_ANGULAR_VEL, angle_error * 2.5))
+                msg.linear.x = max_vel * 0.2
+            elif abs(angle_error) > ANGLE_TOLERANCE:
                 msg.angular.z = max(-MAX_ANGULAR_VEL, min(MAX_ANGULAR_VEL, angle_error * 2.0))
-                if abs(angle_error) < 0.5:
-                    msg.linear.x = max_vel * 0.3
+                msg.linear.x = max_vel * 0.6
             else:
-                msg.linear.x = min(max_vel, distance * 0.5)
-                msg.angular.z = angle_error * 1.0
+                # Velocidad según distancia (más rápido lejos, más lento cerca)
+                speed_factor = min(1.0, distance / 2.0) if must_stop else 1.0
+                msg.linear.x = max_vel * max(0.4, speed_factor)
+                msg.angular.z = angle_error * 1.5
             
             self.cmd_pub.publish(msg)
             
             self.get_logger().info(
-                f'   📊 Dist: {distance:.1f}m | Ang: {math.degrees(angle_error):.0f}°',
+                f'   📊 Dist: {distance:.1f}m | Ang: {math.degrees(angle_error):.0f}° | Vel: {msg.linear.x:.1f}m/s',
                 throttle_duration_sec=1.0
             )
             
-            rclpy.spin_once(self, timeout_sec=0.05)
+            rclpy.spin_once(self, timeout_sec=0.02)  # Más frecuente para mejor control
         
         return False
     
@@ -511,15 +540,27 @@ class ForkliftRouteExecutor(Node):
             y = waypoint['y']
             action = waypoint.get('action', 'none')
             
+            # Determinar si debe parar en este waypoint
+            is_last = (i == len(self.route) - 1)
+            has_action = (action != 'none')
+            must_stop = is_last or has_action
+            
+            # Obtener siguiente waypoint para trayectoria suave
+            next_target = None
+            if not must_stop and i + 1 < len(self.route):
+                next_wp = self.route[i + 1]
+                next_target = (next_wp['x'], next_wp['y'])
+            
             self.get_logger().info(f'\n{"="*50}')
-            self.get_logger().info(f'📍 PASO {i+1}/{len(self.route)}: {name}')
-            if action != 'none':
+            mode = "🛑 PARADA" if must_stop else "➡️ PASO"
+            self.get_logger().info(f'{mode} {i+1}/{len(self.route)}: {name}')
+            if has_action:
                 action_text = "📦 RECOGER" if action == 'pick' else "📤 SOLTAR"
                 self.get_logger().info(f'   Acción: {action_text}')
             self.get_logger().info(f'{"="*50}')
             
             # Navegar al waypoint
-            success = self.navigate_to(x, y, name)
+            success = self.navigate_to(x, y, name, must_stop=must_stop, next_target=next_target)
             
             if not success:
                 self.get_logger().error(f'❌ Error navegando a {name}')
@@ -530,9 +571,6 @@ class ForkliftRouteExecutor(Node):
                 self.execute_pick(waypoint)
             elif action == 'drop':
                 self.execute_drop(waypoint)
-            
-            # Pequeña pausa entre waypoints
-            time.sleep(0.5)
         
         # Fin de la ruta
         self.stop()

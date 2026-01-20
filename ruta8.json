@@ -1,0 +1,272 @@
+{
+  "nodes": {
+    "1": {
+      "x": -15.0,
+      "y": 0.0,
+      "name": "HOME",
+      "type": "home"
+    },
+    "2": {
+      "x": -17.0,
+      "y": 8.0,
+      "name": "PALLET_1",
+      "type": "pallet"
+    },
+    "3": {
+      "x": -15.0,
+      "y": 8.0,
+      "name": "PALLET_2",
+      "type": "pallet"
+    },
+    "4": {
+      "x": -13.0,
+      "y": 8.0,
+      "name": "PALLET_3",
+      "type": "pallet"
+    },
+    "5": {
+      "x": -17.0,
+      "y": 5.0,
+      "name": "PALLET_4",
+      "type": "pallet"
+    },
+    "6": {
+      "x": -15.0,
+      "y": 5.0,
+      "name": "PALLET_5",
+      "type": "pallet"
+    },
+    "7": {
+      "x": -17.0,
+      "y": -8.0,
+      "name": "PALLET_6",
+      "type": "pallet"
+    },
+    "8": {
+      "x": -15.0,
+      "y": -8.0,
+      "name": "PALLET_7",
+      "type": "pallet"
+    },
+    "9": {
+      "x": -13.0,
+      "y": -8.0,
+      "name": "PALLET_8",
+      "type": "pallet"
+    },
+    "10": {
+      "x": -17.0,
+      "y": -5.0,
+      "name": "PALLET_9",
+      "type": "pallet"
+    },
+    "11": {
+      "x": 4.0,
+      "y": 6.0,
+      "name": "PALLET_10",
+      "type": "pallet"
+    },
+    "12": {
+      "x": 4.0,
+      "y": 4.8,
+      "name": "PALLET_11",
+      "type": "pallet"
+    },
+    "13": {
+      "x": 12.0,
+      "y": -6.0,
+      "name": "PALLET_12",
+      "type": "pallet"
+    },
+    "14": {
+      "x": 12.0,
+      "y": -4.9,
+      "name": "PALLET_13",
+      "type": "pallet"
+    },
+    "35": {
+      "x": -10.8,
+      "y": -0.5500000000000007,
+      "name": "WP_35",
+      "type": "waypoint"
+    },
+    "36": {
+      "x": -6.050000000000001,
+      "y": -1.6500000000000004,
+      "name": "WP_36",
+      "type": "waypoint"
+    },
+    "37": {
+      "x": -2.8000000000000007,
+      "y": -1.6500000000000004,
+      "name": "WP_37",
+      "type": "waypoint"
+    },
+    "38": {
+      "x": 0.75,
+      "y": -1.5999999999999996,
+      "name": "WP_38",
+      "type": "waypoint"
+    },
+    "39": {
+      "x": 3.3999999999999986,
+      "y": 0.5,
+      "name": "WP_39",
+      "type": "waypoint"
+    },
+    "40": {
+      "x": 3.8500000000000014,
+      "y": 2.3500000000000014,
+      "name": "WP_40",
+      "type": "waypoint"
+    },
+    "41": {
+      "x": 10.100000000000001,
+      "y": 4.949999999999999,
+      "name": "WP_41",
+      "type": "waypoint"
+    },
+    "42": {
+      "x": 13.299999999999997,
+      "y": 5.050000000000001,
+      "name": "WP_42",
+      "type": "waypoint"
+    },
+    "43": {
+      "x": 15.450000000000003,
+      "y": 3.0500000000000007,
+      "name": "WP_43",
+      "type": "waypoint"
+    },
+    "44": {
+      "x": 20.450000000000003,
+      "y": 0.05000000000000071,
+      "name": "WP_44",
+      "type": "waypoint"
+    },
+    "45": {
+      "x": 15.649999999999999,
+      "y": -1.6500000000000004,
+      "name": "WP_45",
+      "type": "waypoint"
+    },
+    "46": {
+      "x": 10.399999999999999,
+      "y": -2.0999999999999996,
+      "name": "WP_46",
+      "type": "waypoint"
+    },
+    "47": {
+      "x": 7.449999999999999,
+      "y": -3.9000000000000004,
+      "name": "WP_47",
+      "type": "waypoint"
+    },
+    "48": {
+      "x": 5.0,
+      "y": -4.6,
+      "name": "WP_48",
+      "type": "waypoint"
+    },
+    "49": {
+      "x": 2.1999999999999993,
+      "y": -5.0,
+      "name": "WP_49",
+      "type": "waypoint"
+    },
+    "50": {
+      "x": -3.25,
+      "y": -5.199999999999999,
+      "name": "WP_50",
+      "type": "waypoint"
+    },
+    "51": {
+      "x": -8.9,
+      "y": -4.35,
+      "name": "WP_51",
+      "type": "waypoint"
+    }
+  },
+  "route": [
+    {
+      "node_id": 1,
+      "action": "none"
+    },
+    {
+      "node_id": 35,
+      "action": "none"
+    },
+    {
+      "node_id": 36,
+      "action": "none"
+    },
+    {
+      "node_id": 37,
+      "action": "none"
+    },
+    {
+      "node_id": 38,
+      "action": "none"
+    },
+    {
+      "node_id": 39,
+      "action": "none"
+    },
+    {
+      "node_id": 40,
+      "action": "none"
+    },
+    {
+      "node_id": 12,
+      "action": "pick"
+    },
+    {
+      "node_id": 41,
+      "action": "none"
+    },
+    {
+      "node_id": 42,
+      "action": "none"
+    },
+    {
+      "node_id": 43,
+      "action": "none"
+    },
+    {
+      "node_id": 44,
+      "action": "drop"
+    },
+    {
+      "node_id": 45,
+      "action": "none"
+    },
+    {
+      "node_id": 46,
+      "action": "none"
+    },
+    {
+      "node_id": 47,
+      "action": "none"
+    },
+    {
+      "node_id": 48,
+      "action": "none"
+    },
+    {
+      "node_id": 49,
+      "action": "none"
+    },
+    {
+      "node_id": 50,
+      "action": "none"
+    },
+    {
+      "node_id": 51,
+      "action": "none"
+    },
+    {
+      "node_id": 1,
+      "action": "none"
+    }
+  ]
+}
