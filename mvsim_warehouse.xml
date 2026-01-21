@@ -201,7 +201,7 @@
         </visual>
     </block:class>
 
-    <!-- Pallets (elevados para que las horquillas entren en los huecos) -->
+    <!-- Pallets (reducidos para encajar en las horquillas del forklift) -->
     <block:class name="pallet">
         <mass>25</mass>
         <ground_friction>0.3</ground_friction>
@@ -209,6 +209,7 @@
         <visual>
             <model_uri>https://mrpt.github.io/mvsim-models/pallet.zip/pallet/pallet.dae</model_uri>
             <model_roll>90.0</model_roll>
+            <model_scale>1.5</model_scale>
             <model_offset_z>0.08</model_offset_z>
         </visual>
     </block:class>
@@ -216,7 +217,7 @@
     <!-- Pallet Jack (transpallet manual) -->
     <block:class name="pallet_jack">
         <mass>30</mass>
-        <ground_friction>0.8</ground_friction>
+        <ground_friction>0.10</ground_friction>
         <shape_from_visual/>
         <visual>
             <model_uri>https://mrpt.github.io/mvsim-models/pallet_jack.zip/pallet_jack/pallet_jack.dae</model_uri>

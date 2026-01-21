@@ -1,0 +1,232 @@
+{
+  "nodes": {
+    "1": {
+      "x": -15.0,
+      "y": 0.0,
+      "name": "HOME",
+      "type": "home"
+    },
+    "2": {
+      "x": -17.0,
+      "y": 8.0,
+      "name": "PALLET_1",
+      "type": "pallet"
+    },
+    "3": {
+      "x": -15.0,
+      "y": 8.0,
+      "name": "PALLET_2",
+      "type": "pallet"
+    },
+    "4": {
+      "x": -13.0,
+      "y": 8.0,
+      "name": "PALLET_3",
+      "type": "pallet"
+    },
+    "5": {
+      "x": -17.0,
+      "y": 5.0,
+      "name": "PALLET_4",
+      "type": "pallet"
+    },
+    "6": {
+      "x": -15.0,
+      "y": 5.0,
+      "name": "PALLET_5",
+      "type": "pallet"
+    },
+    "7": {
+      "x": -17.0,
+      "y": -8.0,
+      "name": "PALLET_6",
+      "type": "pallet"
+    },
+    "8": {
+      "x": -15.0,
+      "y": -8.0,
+      "name": "PALLET_7",
+      "type": "pallet"
+    },
+    "9": {
+      "x": -13.0,
+      "y": -8.0,
+      "name": "PALLET_8",
+      "type": "pallet"
+    },
+    "10": {
+      "x": -17.0,
+      "y": -5.0,
+      "name": "PALLET_9",
+      "type": "pallet"
+    },
+    "11": {
+      "x": 4.0,
+      "y": 6.0,
+      "name": "PALLET_10",
+      "type": "pallet"
+    },
+    "12": {
+      "x": 4.0,
+      "y": 4.8,
+      "name": "PALLET_11",
+      "type": "pallet"
+    },
+    "13": {
+      "x": 12.0,
+      "y": -6.0,
+      "name": "PALLET_12",
+      "type": "pallet"
+    },
+    "14": {
+      "x": 12.0,
+      "y": -4.9,
+      "name": "PALLET_13",
+      "type": "pallet"
+    },
+    "25": {
+      "x": -12.4,
+      "y": -1.6999999999999993,
+      "name": "WP_25",
+      "type": "waypoint"
+    },
+    "26": {
+      "x": -9.65,
+      "y": -2.0500000000000007,
+      "name": "WP_26",
+      "type": "waypoint"
+    },
+    "27": {
+      "x": -5.699999999999999,
+      "y": -3.3499999999999996,
+      "name": "WP_27",
+      "type": "waypoint"
+    },
+    "28": {
+      "x": -3.3500000000000014,
+      "y": -4.199999999999999,
+      "name": "WP_28",
+      "type": "waypoint"
+    },
+    "29": {
+      "x": -1.8000000000000007,
+      "y": -4.050000000000001,
+      "name": "WP_29",
+      "type": "waypoint"
+    },
+    "30": {
+      "x": 0.75,
+      "y": -3.6500000000000004,
+      "name": "WP_30",
+      "type": "waypoint"
+    },
+    "31": {
+      "x": 2.8000000000000007,
+      "y": -2.0,
+      "name": "WP_31",
+      "type": "waypoint"
+    },
+    "32": {
+      "x": 3.5,
+      "y": 0.6500000000000004,
+      "name": "WP_32",
+      "type": "waypoint"
+    },
+    "33": {
+      "x": 3.8999999999999986,
+      "y": 1.9499999999999993,
+      "name": "WP_33",
+      "type": "waypoint"
+    },
+    "34": {
+      "x": 8.350000000000001,
+      "y": 3.4499999999999993,
+      "name": "WP_34",
+      "type": "waypoint"
+    },
+    "35": {
+      "x": 12.0,
+      "y": 3.8500000000000014,
+      "name": "WP_35",
+      "type": "waypoint"
+    },
+    "36": {
+      "x": 14.0,
+      "y": 2.3999999999999986,
+      "name": "WP_36",
+      "type": "waypoint"
+    },
+    "37": {
+      "x": 14.950000000000003,
+      "y": -0.15000000000000036,
+      "name": "WP_37",
+      "type": "waypoint"
+    }
+  },
+  "route": [
+    {
+      "node_id": 1,
+      "action": "none"
+    },
+    {
+      "node_id": 25,
+      "action": "none"
+    },
+    {
+      "node_id": 26,
+      "action": "none"
+    },
+    {
+      "node_id": 27,
+      "action": "none"
+    },
+    {
+      "node_id": 28,
+      "action": "none"
+    },
+    {
+      "node_id": 29,
+      "action": "none"
+    },
+    {
+      "node_id": 30,
+      "action": "none"
+    },
+    {
+      "node_id": 31,
+      "action": "none"
+    },
+    {
+      "node_id": 32,
+      "action": "none"
+    },
+    {
+      "node_id": 33,
+      "action": "none"
+    },
+    {
+      "node_id": 12,
+      "action": "pick"
+    },
+    {
+      "node_id": 34,
+      "action": "none"
+    },
+    {
+      "node_id": 35,
+      "action": "none"
+    },
+    {
+      "node_id": 36,
+      "action": "none"
+    },
+    {
+      "node_id": 37,
+      "action": "none"
+    },
+    {
+      "node_id": 37,
+      "action": "drop"
+    }
+  ]
+}
